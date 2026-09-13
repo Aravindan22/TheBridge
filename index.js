@@ -322,7 +322,7 @@ async function handleCLI(request, env, url) {
     db.chats[targetId].messages.push({ id: msgId, role, text, timestamp: Date.now() });
     await saveDB(db);
 
-    return new Response(\`Success! Chat ID: \${targetId}\\n\`, { status: 201, headers: textPlain });
+    return new Response(`Success! Chat ID: \${targetId}\n`, { status: 201, headers: textPlain });
   }
 
   if (path === '/cli/latest' && request.method === 'GET') {
@@ -356,10 +356,10 @@ async function handleCLI(request, env, url) {
     
     if (!chat) return new Response('Chat not found', { status: 404, headers: textPlain });
 
-    let output = \`=== Chat \${chatId} ===\\n\\n\`;
+    let output = `=== Chat \${chatId} ===\\n\\n`;
     chat.messages.forEach(msg => {
       const prefix = msg.role === 'user' ? '[PROMPT]' : '[AI RESULT]';
-      output += \`\${prefix}:\\n\${msg.text}\\n\\n---\\n\\n\`;
+      output += `\${prefix}:\\n\${msg.text}\\n\\n---\\n\\n\=`;
     });
 
     return new Response(output, { headers: textPlain });
