@@ -254,25 +254,25 @@ async function handleCLI(request, env, url) {
   if (path === '/cli' && request.method === 'GET') {
     const db = await getDB();
     const chatIds = Object.keys(db.chats).sort((a,b) => b - a);
-    let output = "=== Prompt Bridge CLI ===\\n\\n";
+    let output = "=== Prompt Bridge CLI ===\n\n";
     
     if (chatIds.length === 0) {
-      output += "No chats found. Create one by POSTing text to /cli\\n";
+      output += "No chats found. Create one by POSTing text to /cli\n";
     } else {
-      output += "Recent Chats:\\n";
+      output += "Recent Chats:\n";
       chatIds.slice(0, 5).forEach(id => {
         const chat = db.chats[id];
         const firstMsg = chat.messages.find(m => m.role === 'user')?.text || 'Empty';
-        output += \`- [\${id}] \${firstMsg.substring(0, 40).replace(/\\n/g, ' ')}\\n\`;
+        output += `- [${id}] ${firstMsg.substring(0, 40).replace(/\n/g, ' ')}\n`;
       });
     }
     
-    output += "\\n--- Commands ---\\n";
-    output += "POST /cli             : Create new chat (Body = prompt text)\\n";
-    output += "POST /cli?chat=ID     : Append to chat (Body = text)\\n";
-    output += "GET  /cli/latest      : Get latest message text\\n";
-    output += "GET  /cli/latest?role=user|ai : Filter by role\\n";
-    output += "GET  /cli/chat/ID     : Get full chat text\\n";
+    output += "\n--- Commands ---\n";
+    output += "POST /cli             : Create new chat (Body = prompt text)\n";
+    output += "POST /cli?chat=ID     : Append to chat (Body = text)\n";
+    output += "GET  /cli/latest      : Get latest message text\n";
+    output += "GET  /cli/latest?role=user|ai : Filter by role\n";
+    output += "GET  /cli/chat/ID     : Get full chat text\n";
     
     return new Response(output, { headers: textPlain });
   }
@@ -295,7 +295,7 @@ async function handleCLI(request, env, url) {
     db.chats[targetId].messages.push({ id: msgId, role, text, timestamp: Date.now() });
     await saveDB(db);
 
-    return new Response(\`Success! Chat ID: \${targetId}\\n\`, { status: 201, headers: textPlain });
+    return new Response(`Success! Chat ID: ${targetId}\n`, { status: 201, headers: textPlain });
   }
 
   if (path === '/cli/latest' && request.method === 'GET') {
@@ -329,10 +329,10 @@ async function handleCLI(request, env, url) {
     
     if (!chat) return new Response('Chat not found', { status: 404, headers: textPlain });
 
-    let output = \`=== Chat \${chatId} ===\\n\\n\`;
+    let output = `=== Chat ${chatId} ===\n\n`;
     chat.messages.forEach(msg => {
       const prefix = msg.role === 'user' ? '[PROMPT]' : '[AI RESULT]';
-      output += \`\${prefix}:\\n\${msg.text}\\n\\n---\\n\\n\`;
+      output += `${prefix}:\n${msg.text}\n\n---\n\n`;
     });
 
     return new Response(output, { headers: textPlain });
@@ -371,7 +371,7 @@ export default {
       const { id } = await request.json(); const db = await getDB(); db.chats[id] = { messages: [] }; await saveDB(db); return Response.json({ success: true });
     }
     
-    if (path.match(/^\\/api\\/chats\\/\\d+\\/messages$/) && request.method === 'POST') {
+    if (path.match(/^\/api\/chats\/\d+\/messages$/) && request.method === 'POST') {
       const chatId = path.split('/')[3]; 
       const { id, role, text } = await request.json(); 
       const db = await getDB();
@@ -381,7 +381,7 @@ export default {
       return Response.json({ success: true });
     }
     
-    if (path.match(/^\\/api\\/chats\\/\\d+\\/messages\\/.+$/) && request.method === 'PUT') {
+    if (path.match(/^\/api\/chats\/\d+\/messages\/.+$/) && request.method === 'PUT') {
       const parts = path.split('/');
       const chatId = parts[3];
       const msgId = parts[5];
@@ -398,7 +398,7 @@ export default {
       return Response.json({ success: true });
     }
     
-    if (path.match(/^\\/api\\/chats\\/\\d+\\/messages\\/.+$/) && request.method === 'DELETE') {
+    if (path.match(/^\/api\/chats\/\d+\/messages\/.+$/) && request.method === 'DELETE') {
       const parts = path.split('/');
       const chatId = parts[3];
       const msgId = parts[5];
@@ -411,7 +411,7 @@ export default {
       return Response.json({ success: true });
     }
     
-    if (path.match(/^\\/api\\/chats\\/\\d+$/) && request.method === 'DELETE') {
+    if (path.match(/^\/api\/chats\/\d+$/) && request.method === 'DELETE') {
       const chatId = path.split('/')[3]; const db = await getDB(); delete db.chats[chatId]; await saveDB(db); return Response.json({ success: true });
     }
 
