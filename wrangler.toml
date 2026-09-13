@@ -1,0 +1,7 @@
+name = "the-bridge"
+main = "index.js"
+compatibility_date = "2026-09-01"
+
+[[kv_namespaces]]
+binding = "CLIP_KV"
+id = "fe427e5031a142a5b7a7af9a5623e357"
