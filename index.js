@@ -5,6 +5,7 @@ const HTML_UI = `<!DOCTYPE html>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Prompt Bridge</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🌉</text></svg>">
 <style>
   :root {
     --bg-dark: #0B1120; --bg-card: #1E293B; --bg-input: #0F172A;
@@ -34,7 +35,7 @@ const HTML_UI = `<!DOCTYPE html>
   .bubble { max-width: 85%; padding: 12px 15px; border-radius: 18px; position: relative; word-wrap: break-word; white-space: pre-wrap; font-size: 0.95rem; line-height: 1.4; }
   .bubble-user { background: var(--blue); color: white; align-self: flex-end; border-bottom-right-radius: 4px; }
   .bubble-ai { background: var(--green); color: var(--green-dark); align-self: flex-start; border-bottom-left-radius: 4px; font-weight: 500; }
-  .bubble-actions { display: flex; gap: 10px; margin-top: 8px; font-size: 0.8rem; opacity: 0.8; }
+  .bubble-actions { display: flex; gap: 10px; margin-top: 8px; font-size: 0.8rem; opacity: 0.8; flex-wrap: wrap; }
   .bubble-actions span { cursor: pointer; }
   .bubble-actions span:active { opacity: 0.5; }
 
@@ -161,7 +162,7 @@ const HTML_UI = `<!DOCTYPE html>
     const container = document.getElementById('messages-container');
     document.getElementById('chat-title').innerText = 'Thread';
     if (chat.messages.length === 0) { container.innerHTML = '<div class="empty-state">Send a prompt to start!</div>'; return; }
-    container.innerHTML = chat.messages.map((msg, i) => \`<div class="bubble bubble-\${msg.role}">\${escapeHtml(msg.text)}<div class="bubble-actions"><span onclick="copyText(\${i})">📋 Copy</span><span onclick="shareText(\${i})">📤 Share</span></div></div>\`).join('');
+    container.innerHTML = chat.messages.map((msg) => \`<div class="bubble bubble-\${msg.role}">\${escapeHtml(msg.text)}<div class="bubble-actions"><span onclick="copyText('\${msg.id}')">📋 Copy</span><span onclick="shareText('\${msg.id}')">📤 Share</span><span onclick="editMessage('\${msg.id}')">✏️ Edit</span><span onclick="deleteMessage('\${msg.id}')">🗑️ Delete</span></div></div>\`).join('');
     container.scrollTop = container.scrollHeight;
   }
 
@@ -176,10 +177,44 @@ const HTML_UI = `<!DOCTYPE html>
     const input = document.getElementById('msg-input');
     const text = input.value.trim();
     if (!text) return;
-    state.chats[state.currentChatId].messages.push({ role, text });
+    const msgId = 'msg_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+    state.chats[state.currentChatId].messages.push({ id: msgId, role, text });
     input.value = '';
     renderChat();
-    await fetch(\`/api/chats/\${state.currentChatId}/messages\`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Auth': TOKEN }, body: JSON.stringify({ role, text }) });
+    await fetch(\`/api/chats/\${state.currentChatId}/messages\`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Auth': TOKEN }, body: JSON.stringify({ id: msgId, role, text }) });
+  }
+
+  async function editMessage(msgId) {
+    const chat = state.chats[state.currentChatId];
+    const msg = chat.messages.find(m => m.id === msgId);
+    if (!msg) return;
+    
+    const newText = prompt('Edit message:', msg.text);
+    if (newText === null || newText.trim() === '') return;
+    
+    msg.text = newText.trim();
+    renderChat();
+    
+    await fetch(\`/api/chats/\${state.currentChatId}/messages/\${msgId}\`, { 
+      method: 'PUT', 
+      headers: { 'Content-Type': 'application/json', 'X-Auth': TOKEN }, 
+      body: JSON.stringify({ text: newText.trim() }) 
+    });
+    showToast('Message updated!');
+  }
+
+  async function deleteMessage(msgId) {
+    if (!confirm('Delete this message?')) return;
+    
+    const chat = state.chats[state.currentChatId];
+    chat.messages = chat.messages.filter(m => m.id !== msgId);
+    renderChat();
+    
+    await fetch(\`/api/chats/\${state.currentChatId}/messages/\${msgId}\`, { 
+      method: 'DELETE', 
+      headers: { 'X-Auth': TOKEN } 
+    });
+    showToast('Message deleted!');
   }
 
   async function deleteCurrentChat() {
@@ -189,12 +224,18 @@ const HTML_UI = `<!DOCTYPE html>
     showListView();
   }
 
-  function copyText(index) { navigator.clipboard.writeText(state.chats[state.currentChatId].messages[index].text); showToast('Copied!'); }
-  function shareText(index) {
-    const text = state.chats[state.currentChatId].messages[index].text;
-    if (navigator.share) navigator.share({ title: 'AI Prompt', text: text });
-    else { navigator.clipboard.writeText(text); showToast('Copied for sharing!'); }
+  function copyText(msgId) { 
+    const msg = state.chats[state.currentChatId].messages.find(m => m.id === msgId);
+    if (msg) { navigator.clipboard.writeText(msg.text); showToast('Copied!'); }
   }
+  
+  function shareText(msgId) {
+    const msg = state.chats[state.currentChatId].messages.find(m => m.id === msgId);
+    if (!msg) return;
+    if (navigator.share) navigator.share({ title: 'AI Prompt', text: msg.text });
+    else { navigator.clipboard.writeText(msg.text); showToast('Copied for sharing!'); }
+  }
+  
   function showToast(msg) { const t = document.getElementById('toast'); t.innerText = msg; t.classList.add('show'); setTimeout(() => t.classList.remove('show'), 2000); }
   function escapeHtml(text) { const div = document.createElement('div'); div.innerText = text; return div.innerHTML; }
 </script>
@@ -210,34 +251,32 @@ async function handleCLI(request, env, url) {
   const getDB = async () => (await env.CLIP_KV.get('database', 'json')) || { chats: {} };
   const saveDB = async (data) => await env.CLIP_KV.put('database', JSON.stringify(data));
 
-  // GET /cli (Help & List)
   if (path === '/cli' && request.method === 'GET') {
     const db = await getDB();
     const chatIds = Object.keys(db.chats).sort((a,b) => b - a);
-    let output = "=== Prompt Bridge CLI ===\n\n";
+    let output = "=== Prompt Bridge CLI ===\\n\\n";
     
     if (chatIds.length === 0) {
-      output += "No chats found. Create one by POSTing text to /cli\n";
+      output += "No chats found. Create one by POSTing text to /cli\\n";
     } else {
-      output += "Recent Chats:\n";
+      output += "Recent Chats:\\n";
       chatIds.slice(0, 5).forEach(id => {
         const chat = db.chats[id];
         const firstMsg = chat.messages.find(m => m.role === 'user')?.text || 'Empty';
-        output += `- [${id}] ${firstMsg.substring(0, 40).replace(/\n/g, ' ')}\n`;
+        output += \`- [\${id}] \${firstMsg.substring(0, 40).replace(/\\n/g, ' ')}\\n\`;
       });
     }
     
-    output += "\n--- Commands ---\n";
-    output += "POST /cli             : Create new chat (Body = prompt text)\n";
-    output += "POST /cli?chat=ID     : Append to chat (Body = text)\n";
-    output += "GET  /cli/latest      : Get latest message text\n";
-    output += "GET  /cli/latest?role=user|ai : Filter by role\n";
-    output += "GET  /cli/chat/ID     : Get full chat text\n";
+    output += "\\n--- Commands ---\\n";
+    output += "POST /cli             : Create new chat (Body = prompt text)\\n";
+    output += "POST /cli?chat=ID     : Append to chat (Body = text)\\n";
+    output += "GET  /cli/latest      : Get latest message text\\n";
+    output += "GET  /cli/latest?role=user|ai : Filter by role\\n";
+    output += "GET  /cli/chat/ID     : Get full chat text\\n";
     
     return new Response(output, { headers: textPlain });
   }
 
-  // POST /cli (Create or Append)
   if (path === '/cli' && request.method === 'POST') {
     const text = await request.text();
     if (!text.trim()) return new Response('Error: Empty body', { status: 400, headers: textPlain });
@@ -252,13 +291,13 @@ async function handleCLI(request, env, url) {
       db.chats[targetId] = { messages: [] };
     }
 
-    db.chats[targetId].messages.push({ role, text, timestamp: Date.now() });
+    const msgId = 'msg_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+    db.chats[targetId].messages.push({ id: msgId, role, text, timestamp: Date.now() });
     await saveDB(db);
 
-    return new Response(`Success! Chat ID: ${targetId}\n`, { status: 201, headers: textPlain });
+    return new Response(\`Success! Chat ID: \${targetId}\\n\`, { status: 201, headers: textPlain });
   }
 
-  // GET /cli/latest
   if (path === '/cli/latest' && request.method === 'GET') {
     const db = await getDB();
     const roleFilter = params.get('role');
@@ -280,11 +319,9 @@ async function handleCLI(request, env, url) {
       return new Response('No messages found.', { status: 404, headers: textPlain });
     }
 
-    // Return JUST the raw text so it can be piped in terminal
     return new Response(allMsgs[0].text, { headers: textPlain });
   }
 
-  // GET /cli/chat/:id
   if (path.startsWith('/cli/chat/') && request.method === 'GET') {
     const chatId = path.split('/').pop();
     const db = await getDB();
@@ -292,10 +329,10 @@ async function handleCLI(request, env, url) {
     
     if (!chat) return new Response('Chat not found', { status: 404, headers: textPlain });
 
-    let output = `=== Chat ${chatId} ===\n\n`;
+    let output = \`=== Chat \${chatId} ===\\n\\n\`;
     chat.messages.forEach(msg => {
       const prefix = msg.role === 'user' ? '[PROMPT]' : '[AI RESULT]';
-      output += `${prefix}:\n${msg.text}\n\n---\n\n`;
+      output += \`\${prefix}:\\n\${msg.text}\\n\\n---\\n\\n\`;
     });
 
     return new Response(output, { headers: textPlain });
@@ -310,38 +347,71 @@ export default {
     const url = new URL(request.url);
     const path = url.pathname;
 
-    // 1. Serve UI
     if (path === '/' && request.method === 'GET') {
       return new Response(HTML_UI, { headers: { 'Content-Type': 'text/html' } });
     }
 
-    // 2. Auth Check
     const token = request.headers.get('X-Auth');
     if (token !== env.ADMIN_PASSWORD) {
       return new Response('Unauthorized. Use -H "X-Auth: YOUR_PASSWORD"', { status: 401, headers: { 'Content-Type': 'text/plain' } });
     }
 
-    // 3. Route to CLI handler
     if (path.startsWith('/cli')) {
       return handleCLI(request, env, url);
     }
 
-    // 4. Existing Web API routes
     const getDB = async () => (await env.CLIP_KV.get('database', 'json')) || { chats: {} };
     const saveDB = async (data) => await env.CLIP_KV.put('database', JSON.stringify(data));
 
     if (path === '/api/chats' && request.method === 'GET') {
       const db = await getDB(); return Response.json(db.chats);
     }
+    
     if (path === '/api/chats' && request.method === 'POST') {
       const { id } = await request.json(); const db = await getDB(); db.chats[id] = { messages: [] }; await saveDB(db); return Response.json({ success: true });
     }
-    if (path.match(/^\/api\/chats\/\d+\/messages$/) && request.method === 'POST') {
-      const chatId = path.split('/')[3]; const { role, text } = await request.json(); const db = await getDB();
+    
+    if (path.match(/^\\/api\\/chats\\/\\d+\\/messages$/) && request.method === 'POST') {
+      const chatId = path.split('/')[3]; 
+      const { id, role, text } = await request.json(); 
+      const db = await getDB();
       if (!db.chats[chatId]) return new Response('Chat not found', { status: 404 });
-      db.chats[chatId].messages.push({ role, text, timestamp: Date.now() }); await saveDB(db); return Response.json({ success: true });
+      db.chats[chatId].messages.push({ id, role, text, timestamp: Date.now() }); 
+      await saveDB(db); 
+      return Response.json({ success: true });
     }
-    if (path.match(/^\/api\/chats\/\d+$/) && request.method === 'DELETE') {
+    
+    if (path.match(/^\\/api\\/chats\\/\\d+\\/messages\\/.+$/) && request.method === 'PUT') {
+      const parts = path.split('/');
+      const chatId = parts[3];
+      const msgId = parts[5];
+      const { text } = await request.json();
+      
+      const db = await getDB();
+      if (!db.chats[chatId]) return new Response('Chat not found', { status: 404 });
+      
+      const msg = db.chats[chatId].messages.find(m => m.id === msgId);
+      if (!msg) return new Response('Message not found', { status: 404 });
+      
+      msg.text = text;
+      await saveDB(db);
+      return Response.json({ success: true });
+    }
+    
+    if (path.match(/^\\/api\\/chats\\/\\d+\\/messages\\/.+$/) && request.method === 'DELETE') {
+      const parts = path.split('/');
+      const chatId = parts[3];
+      const msgId = parts[5];
+      
+      const db = await getDB();
+      if (!db.chats[chatId]) return new Response('Chat not found', { status: 404 });
+      
+      db.chats[chatId].messages = db.chats[chatId].messages.filter(m => m.id !== msgId);
+      await saveDB(db);
+      return Response.json({ success: true });
+    }
+    
+    if (path.match(/^\\/api\\/chats\\/\\d+$/) && request.method === 'DELETE') {
       const chatId = path.split('/')[3]; const db = await getDB(); delete db.chats[chatId]; await saveDB(db); return Response.json({ success: true });
     }
 
