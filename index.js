@@ -15,17 +15,14 @@ const HTML_UI = `<!DOCTYPE html>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--bg-dark); color: var(--white); height: 100dvh; display: flex; flex-direction: column; overflow: hidden; }
   
-  /* Header */
   .header { background: var(--bg-card); padding: 15px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #334155; flex-shrink: 0; }
   .header h1 { font-size: 1.2rem; font-weight: 600; }
   .icon-btn { background: transparent; border: none; color: var(--white); font-size: 1.5rem; cursor: pointer; padding: 5px; }
   .icon-btn:active { opacity: 0.5; }
 
-  /* Views */
   .view { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
   .hidden { display: none !important; }
 
-  /* List View */
   .list-container { flex: 1; overflow-y: auto; padding: 15px; }
   .chat-card { background: var(--bg-card); padding: 15px; border-radius: 12px; margin-bottom: 12px; border: 1px solid #334155; cursor: pointer; transition: transform 0.1s; }
   .chat-card:active { transform: scale(0.98); }
@@ -33,7 +30,6 @@ const HTML_UI = `<!DOCTYPE html>
   .chat-preview { font-size: 0.9rem; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .chat-meta { font-size: 0.75rem; color: var(--muted); margin-top: 8px; display: flex; justify-content: space-between; }
 
-  /* Chat View */
   .messages { flex: 1; overflow-y: auto; padding: 15px; display: flex; flex-direction: column; gap: 12px; }
   .bubble { max-width: 85%; padding: 12px 15px; border-radius: 18px; position: relative; word-wrap: break-word; white-space: pre-wrap; font-size: 0.95rem; line-height: 1.4; }
   .bubble-user { background: var(--blue); color: white; align-self: flex-end; border-bottom-right-radius: 4px; }
@@ -42,7 +38,6 @@ const HTML_UI = `<!DOCTYPE html>
   .bubble-actions span { cursor: pointer; }
   .bubble-actions span:active { opacity: 0.5; }
 
-  /* Input Area */
   .input-area { background: var(--bg-card); padding: 15px; border-top: 1px solid #334155; flex-shrink: 0; }
   .input-row { display: flex; gap: 10px; margin-bottom: 10px; }
   textarea { flex: 1; background: var(--bg-input); border: 1px solid #334155; color: var(--white); padding: 12px; border-radius: 12px; font-size: 1rem; resize: none; height: 60px; font-family: inherit; }
@@ -53,11 +48,9 @@ const HTML_UI = `<!DOCTYPE html>
   .btn-danger { background: var(--danger); color: white; }
   .btn:active { opacity: 0.7; }
 
-  /* Login */
   .login-screen { flex: 1; display: flex; flex-direction: column; justify-content: center; padding: 20px; }
   .login-screen input { background: var(--bg-input); border: 1px solid #334155; color: var(--white); padding: 15px; border-radius: 12px; font-size: 1rem; margin-bottom: 15px; }
 
-  /* Toast */
   .toast { position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%); background: var(--bg-card); color: var(--white); border: 1px solid var(--green); padding: 10px 20px; border-radius: 20px; opacity: 0; transition: opacity 0.3s; pointer-events: none; font-size: 0.9rem;}
   .toast.show { opacity: 1; }
   
@@ -66,7 +59,6 @@ const HTML_UI = `<!DOCTYPE html>
 </head>
 <body>
 
-<!-- LOGIN -->
 <div id="login-view" class="view">
   <div class="login-screen">
     <h1 style="text-align:center; margin-bottom:30px; color:var(--green);">🔐 Prompt Bridge</h1>
@@ -75,7 +67,6 @@ const HTML_UI = `<!DOCTYPE html>
   </div>
 </div>
 
-<!-- LIST VIEW -->
 <div id="list-view" class="view hidden">
   <div class="header">
     <h1>💬 Chats</h1>
@@ -90,7 +81,6 @@ const HTML_UI = `<!DOCTYPE html>
   </div>
 </div>
 
-<!-- CHAT VIEW -->
 <div id="chat-view" class="view hidden">
   <div class="header">
     <button class="icon-btn" onclick="showListView()">←</button>
@@ -134,98 +124,51 @@ const HTML_UI = `<!DOCTYPE html>
     await checkAuth();
   }
 
-  function logout() {
-    TOKEN = null;
-    localStorage.removeItem('bridge_token');
-    location.reload();
-  }
-
+  function logout() { TOKEN = null; localStorage.removeItem('bridge_token'); location.reload(); }
   function showListView() {
     document.getElementById('login-view').classList.add('hidden');
     document.getElementById('chat-view').classList.add('hidden');
     document.getElementById('list-view').classList.remove('hidden');
     renderList();
   }
-
   function showChatView(id) {
     state.currentChatId = id;
     document.getElementById('list-view').classList.add('hidden');
     document.getElementById('chat-view').classList.remove('hidden');
     renderChat();
   }
-
   async function refreshData() {
     const res = await fetch('/api/chats', { headers: { 'X-Auth': TOKEN } });
-    if(res.ok) {
-      state.chats = await res.json();
-      if(state.currentChatId) renderChat();
-      else renderList();
-      showToast('Refreshed!');
-    }
+    if(res.ok) { state.chats = await res.json(); if(state.currentChatId) renderChat(); else renderList(); showToast('Refreshed!'); }
   }
 
   function renderList() {
     const container = document.getElementById('chat-list');
     const chatIds = Object.keys(state.chats).sort((a,b) => b - a);
-    
-    if (chatIds.length === 0) {
-      container.innerHTML = '<div class="empty-state">No chats yet. Create one to start!</div>';
-      return;
-    }
-
+    if (chatIds.length === 0) { container.innerHTML = '<div class="empty-state">No chats yet. Create one to start!</div>'; return; }
     container.innerHTML = chatIds.map(id => {
-      const chat = state.chats[id];
-      const msgs = chat.messages;
+      const chat = state.chats[id]; const msgs = chat.messages;
       const title = msgs.find(m => m.role === 'user')?.text || 'New Chat';
       const preview = msgs[msgs.length - 1]?.text || '';
       const date = new Date(parseInt(id)).toLocaleString();
-      
-      return \`
-        <div class="chat-card" onclick="showChatView('\${id}')">
-          <div class="chat-title">\${escapeHtml(title.substring(0, 50))}</div>
-          <div class="chat-preview">\${escapeHtml(preview.substring(0, 80))}</div>
-          <div class="chat-meta">
-            <span>\${msgs.length} messages</span>
-            <span>\${date}</span>
-          </div>
-        </div>
-      \`;
+      return \`<div class="chat-card" onclick="showChatView('\${id}')"><div class="chat-title">\${escapeHtml(title.substring(0, 50))}</div><div class="chat-preview">\${escapeHtml(preview.substring(0, 80))}</div><div class="chat-meta"><span>\${msgs.length} messages</span><span>\${date}</span></div></div>\`;
     }).join('');
   }
 
   function renderChat() {
     const chat = state.chats[state.currentChatId];
     if (!chat) return showListView();
-    
     const container = document.getElementById('messages-container');
     document.getElementById('chat-title').innerText = 'Thread';
-
-    if (chat.messages.length === 0) {
-      container.innerHTML = '<div class="empty-state">Send a prompt to start!</div>';
-      return;
-    }
-
-    container.innerHTML = chat.messages.map((msg, i) => \`
-      <div class="bubble bubble-\${msg.role}">
-        \${escapeHtml(msg.text)}
-        <div class="bubble-actions">
-          <span onclick="copyText(\${i})">📋 Copy</span>
-          <span onclick="shareText(\${i})">📤 Share</span>
-        </div>
-      </div>
-    \`).join('');
-    
+    if (chat.messages.length === 0) { container.innerHTML = '<div class="empty-state">Send a prompt to start!</div>'; return; }
+    container.innerHTML = chat.messages.map((msg, i) => \`<div class="bubble bubble-\${msg.role}">\${escapeHtml(msg.text)}<div class="bubble-actions"><span onclick="copyText(\${i})">📋 Copy</span><span onclick="shareText(\${i})">📤 Share</span></div></div>\`).join('');
     container.scrollTop = container.scrollHeight;
   }
 
   async function createNewChat() {
     const id = Date.now().toString();
     state.chats[id] = { messages: [] };
-    await fetch('/api/chats', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-Auth': TOKEN },
-      body: JSON.stringify({ id })
-    });
+    await fetch('/api/chats', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Auth': TOKEN }, body: JSON.stringify({ id }) });
     showChatView(id);
   }
 
@@ -233,61 +176,135 @@ const HTML_UI = `<!DOCTYPE html>
     const input = document.getElementById('msg-input');
     const text = input.value.trim();
     if (!text) return;
-
     state.chats[state.currentChatId].messages.push({ role, text });
     input.value = '';
-    renderChat(); // Instant UI update
-
-    await fetch(\`/api/chats/\${state.currentChatId}/messages\`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-Auth': TOKEN },
-      body: JSON.stringify({ role, text })
-    });
+    renderChat();
+    await fetch(\`/api/chats/\${state.currentChatId}/messages\`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Auth': TOKEN }, body: JSON.stringify({ role, text }) });
   }
 
   async function deleteCurrentChat() {
     if (!confirm('Delete this entire chat thread?')) return;
-    await fetch(\`/api/chats/\${state.currentChatId}\`, { 
-      method: 'DELETE', 
-      headers: { 'X-Auth': TOKEN } 
-    });
+    await fetch(\`/api/chats/\${state.currentChatId}\`, { method: 'DELETE', headers: { 'X-Auth': TOKEN } });
     delete state.chats[state.currentChatId];
     showListView();
   }
 
-  function copyText(index) {
-    const text = state.chats[state.currentChatId].messages[index].text;
-    navigator.clipboard.writeText(text);
-    showToast('Copied!');
-  }
-
+  function copyText(index) { navigator.clipboard.writeText(state.chats[state.currentChatId].messages[index].text); showToast('Copied!'); }
   function shareText(index) {
     const text = state.chats[state.currentChatId].messages[index].text;
-    if (navigator.share) {
-      navigator.share({ title: 'AI Prompt', text: text });
-    } else {
-      navigator.clipboard.writeText(text);
-      showToast('Copied for sharing!');
-    }
+    if (navigator.share) navigator.share({ title: 'AI Prompt', text: text });
+    else { navigator.clipboard.writeText(text); showToast('Copied for sharing!'); }
   }
-
-  function showToast(msg) {
-    const t = document.getElementById('toast');
-    t.innerText = msg;
-    t.classList.add('show');
-    setTimeout(() => t.classList.remove('show'), 2000);
-  }
-
-  function escapeHtml(text) {
-    const div = document.createElement('div');
-    div.innerText = text;
-    return div.innerHTML;
-  }
+  function showToast(msg) { const t = document.getElementById('toast'); t.innerText = msg; t.classList.add('show'); setTimeout(() => t.classList.remove('show'), 2000); }
+  function escapeHtml(text) { const div = document.createElement('div'); div.innerText = text; return div.innerHTML; }
 </script>
 </body>
 </html>`;
 
-// --- 2. THE BACKEND API ---
+// --- 2. CLI HANDLER ---
+async function handleCLI(request, env, url) {
+  const path = url.pathname;
+  const params = url.searchParams;
+  const textPlain = { 'Content-Type': 'text/plain; charset=utf-8' };
+
+  const getDB = async () => (await env.CLIP_KV.get('database', 'json')) || { chats: {} };
+  const saveDB = async (data) => await env.CLIP_KV.put('database', JSON.stringify(data));
+
+  // GET /cli (Help & List)
+  if (path === '/cli' && request.method === 'GET') {
+    const db = await getDB();
+    const chatIds = Object.keys(db.chats).sort((a,b) => b - a);
+    let output = "=== Prompt Bridge CLI ===\n\n";
+    
+    if (chatIds.length === 0) {
+      output += "No chats found. Create one by POSTing text to /cli\n";
+    } else {
+      output += "Recent Chats:\n";
+      chatIds.slice(0, 5).forEach(id => {
+        const chat = db.chats[id];
+        const firstMsg = chat.messages.find(m => m.role === 'user')?.text || 'Empty';
+        output += `- [${id}] ${firstMsg.substring(0, 40).replace(/\n/g, ' ')}\n`;
+      });
+    }
+    
+    output += "\n--- Commands ---\n";
+    output += "POST /cli             : Create new chat (Body = prompt text)\n";
+    output += "POST /cli?chat=ID     : Append to chat (Body = text)\n";
+    output += "GET  /cli/latest      : Get latest message text\n";
+    output += "GET  /cli/latest?role=user|ai : Filter by role\n";
+    output += "GET  /cli/chat/ID     : Get full chat text\n";
+    
+    return new Response(output, { headers: textPlain });
+  }
+
+  // POST /cli (Create or Append)
+  if (path === '/cli' && request.method === 'POST') {
+    const text = await request.text();
+    if (!text.trim()) return new Response('Error: Empty body', { status: 400, headers: textPlain });
+    
+    const role = params.get('role') || 'user';
+    const chatId = params.get('chat');
+    const db = await getDB();
+
+    let targetId = chatId;
+    if (!targetId || !db.chats[targetId]) {
+      targetId = Date.now().toString();
+      db.chats[targetId] = { messages: [] };
+    }
+
+    db.chats[targetId].messages.push({ role, text, timestamp: Date.now() });
+    await saveDB(db);
+
+    return new Response(`Success! Chat ID: ${targetId}\n`, { status: 201, headers: textPlain });
+  }
+
+  // GET /cli/latest
+  if (path === '/cli/latest' && request.method === 'GET') {
+    const db = await getDB();
+    const roleFilter = params.get('role');
+    
+    let allMsgs = [];
+    for (const [chatId, chat] of Object.entries(db.chats)) {
+      for (const msg of chat.messages) {
+        allMsgs.push({ ...msg, chatId });
+      }
+    }
+    
+    allMsgs.sort((a, b) => b.timestamp - a.timestamp);
+    
+    if (roleFilter) {
+      allMsgs = allMsgs.filter(m => m.role === roleFilter);
+    }
+
+    if (allMsgs.length === 0) {
+      return new Response('No messages found.', { status: 404, headers: textPlain });
+    }
+
+    // Return JUST the raw text so it can be piped in terminal
+    return new Response(allMsgs[0].text, { headers: textPlain });
+  }
+
+  // GET /cli/chat/:id
+  if (path.startsWith('/cli/chat/') && request.method === 'GET') {
+    const chatId = path.split('/').pop();
+    const db = await getDB();
+    const chat = db.chats[chatId];
+    
+    if (!chat) return new Response('Chat not found', { status: 404, headers: textPlain });
+
+    let output = `=== Chat ${chatId} ===\n\n`;
+    chat.messages.forEach(msg => {
+      const prefix = msg.role === 'user' ? '[PROMPT]' : '[AI RESULT]';
+      output += `${prefix}:\n${msg.text}\n\n---\n\n`;
+    });
+
+    return new Response(output, { headers: textPlain });
+  }
+
+  return new Response('CLI Endpoint not found. Try GET /cli for help.', { status: 404, headers: textPlain });
+}
+
+// --- 3. MAIN BACKEND ROUTER ---
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
@@ -301,48 +318,31 @@ export default {
     // 2. Auth Check
     const token = request.headers.get('X-Auth');
     if (token !== env.ADMIN_PASSWORD) {
-      return new Response('Unauthorized', { status: 401 });
+      return new Response('Unauthorized. Use -H "X-Auth: YOUR_PASSWORD"', { status: 401, headers: { 'Content-Type': 'text/plain' } });
     }
 
-    // Helper to get/save the single database JSON
+    // 3. Route to CLI handler
+    if (path.startsWith('/cli')) {
+      return handleCLI(request, env, url);
+    }
+
+    // 4. Existing Web API routes
     const getDB = async () => (await env.CLIP_KV.get('database', 'json')) || { chats: {} };
     const saveDB = async (data) => await env.CLIP_KV.put('database', JSON.stringify(data));
 
-    // 3. GET all chats (Metadata only for the list view)
     if (path === '/api/chats' && request.method === 'GET') {
-      const db = await getDB();
-      return Response.json(db.chats);
+      const db = await getDB(); return Response.json(db.chats);
     }
-
-    // 4. POST create new chat
     if (path === '/api/chats' && request.method === 'POST') {
-      const { id } = await request.json();
-      const db = await getDB();
-      db.chats[id] = { messages: [] };
-      await saveDB(db);
-      return Response.json({ success: true });
+      const { id } = await request.json(); const db = await getDB(); db.chats[id] = { messages: [] }; await saveDB(db); return Response.json({ success: true });
     }
-
-    // 5. POST add message to chat
     if (path.match(/^\/api\/chats\/\d+\/messages$/) && request.method === 'POST') {
-      const chatId = path.split('/')[3];
-      const { role, text } = await request.json();
-      
-      const db = await getDB();
+      const chatId = path.split('/')[3]; const { role, text } = await request.json(); const db = await getDB();
       if (!db.chats[chatId]) return new Response('Chat not found', { status: 404 });
-      
-      db.chats[chatId].messages.push({ role, text, timestamp: Date.now() });
-      await saveDB(db);
-      return Response.json({ success: true });
+      db.chats[chatId].messages.push({ role, text, timestamp: Date.now() }); await saveDB(db); return Response.json({ success: true });
     }
-
-    // 6. DELETE chat
     if (path.match(/^\/api\/chats\/\d+$/) && request.method === 'DELETE') {
-      const chatId = path.split('/')[3];
-      const db = await getDB();
-      delete db.chats[chatId];
-      await saveDB(db);
-      return Response.json({ success: true });
+      const chatId = path.split('/')[3]; const db = await getDB(); delete db.chats[chatId]; await saveDB(db); return Response.json({ success: true });
     }
 
     return new Response('Not Found', { status: 404 });
