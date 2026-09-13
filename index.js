@@ -290,7 +290,7 @@ async function handleCLI(request, env, url) {
       chatIds.slice(0, 5).forEach(id => {
         const chat = db.chats[id];
         const firstMsg = chat.messages.find(m => m.role === 'user')?.text || 'Empty';
-        output += \`- [\${id}] \${firstMsg.substring(0, 40).replace(/\\n/g, ' ')}\\n\`;
+        output += `- [${id}] ${firstMsg.substring(0, 40).replace(/\n/g, ' ')}\n`;
       });
     }
     
