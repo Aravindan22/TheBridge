@@ -1,11 +1,14 @@
-// --- 1. THE FRONTEND UI (HTML/CSS/JS) ---
+// --- 1. THE FRONTEND UI (HTML/CSS/JS + PWA SETUP) ---
 const HTML_UI = `<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#0B1120">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>Prompt Bridge</title>
-<!-- Your custom SVG favicon goes here -->
+<!-- Your custom SVG favicon -->
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌉</text></svg>">
 <style>
   :root {
@@ -14,8 +17,8 @@ const HTML_UI = `<!DOCTYPE html>
     --green: #4ADE80; --green-dark: #064E3B;
     --white: #F8FAFC; --muted: #94A3B8; --danger: #EF4444;
   }
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--bg-dark); color: var(--white); height: 100dvh; display: flex; flex-direction: column; overflow: hidden; }
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--bg-dark); color: var(--white); height: 100dvh; display: flex; flex-direction: column; overflow: hidden; user-select: none; }
   
   .header { background: var(--bg-card); padding: 15px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #334155; flex-shrink: 0; }
   .header h1 { font-size: 1.2rem; font-weight: 600; }
@@ -37,7 +40,7 @@ const HTML_UI = `<!DOCTYPE html>
   .bubble-user { background: var(--blue); color: white; align-self: flex-end; border-bottom-right-radius: 4px; }
   .bubble-ai { background: var(--green); color: var(--green-dark); align-self: flex-start; border-bottom-left-radius: 4px; font-weight: 500; }
   .bubble-actions { display: flex; gap: 10px; margin-top: 8px; font-size: 0.8rem; opacity: 0.8; flex-wrap: wrap; }
-  .bubble-actions span { cursor: pointer; }
+  .bubble-actions span { cursor: pointer; padding: 5px; }
   .bubble-actions span:active { opacity: 0.5; }
 
   .input-area { background: var(--bg-card); padding: 15px; border-top: 1px solid #334155; flex-shrink: 0; }
@@ -53,7 +56,7 @@ const HTML_UI = `<!DOCTYPE html>
   .login-screen { flex: 1; display: flex; flex-direction: column; justify-content: center; padding: 20px; }
   .login-screen input { background: var(--bg-input); border: 1px solid #334155; color: var(--white); padding: 15px; border-radius: 12px; font-size: 1rem; margin-bottom: 15px; }
 
-  .toast { position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%); background: var(--bg-card); color: var(--white); border: 1px solid var(--green); padding: 10px 20px; border-radius: 20px; opacity: 0; transition: opacity 0.3s; pointer-events: none; font-size: 0.9rem;}
+  .toast { position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%); background: var(--bg-card); color: var(--white); border: 1px solid var(--green); padding: 10px 20px; border-radius: 20px; opacity: 0; transition: opacity 0.3s; pointer-events: none; font-size: 0.9rem; z-index: 1000;}
   .toast.show { opacity: 1; }
   
   .empty-state { text-align: center; color: var(--muted); margin-top: 50px; }
@@ -102,6 +105,21 @@ const HTML_UI = `<!DOCTYPE html>
 <div id="toast" class="toast">Copied!</div>
 
 <script>
+  // --- PWA SERVICE WORKER REGISTRATION ---
+  if ('serviceWorker' in navigator) {
+    const swCode = \`
+      self.addEventListener('install', e => e.waitUntil(self.skipWaiting()));
+      self.addEventListener('activate', e => e.waitUntil(self.clients.claim()));
+      self.addEventListener('fetch', e => {
+        // Always try network first for this dynamic app
+        e.respondWith(fetch(e.request).catch(() => new Response('Offline')));
+      });
+    \`;
+    const blob = new Blob([swCode], { type: 'application/javascript' });
+    const swUrl = URL.createObjectURL(blob);
+    navigator.serviceWorker.register(swUrl).catch(err => console.log('SW Reg Failed', err));
+  }
+
   let TOKEN = localStorage.getItem('bridge_token');
   let state = { chats: {}, currentChatId: null };
 
@@ -178,7 +196,6 @@ const HTML_UI = `<!DOCTYPE html>
       container.innerHTML = '<div class="empty-state">Send a prompt to start!</div>'; 
       return; 
     }
-    // FIXED: Removed accidental backslashes before backticks and \${}
     container.innerHTML = chat.messages.map((msg) => \`<div class="bubble bubble-\${msg.role}">\${escapeHtml(msg.text)}<div class="bubble-actions"><span onclick="copyText('\${msg.id}')">📋 Copy</span><span onclick="shareText('\${msg.id}')">📤 Share</span><span onclick="editMessage('\${msg.id}')">✏️ Edit</span><span onclick="deleteMessage('\${msg.id}')">🗑️ Delete</span></div></div>\`).join('');
     container.scrollTop = container.scrollHeight;
   }
@@ -290,7 +307,7 @@ async function handleCLI(request, env, url) {
       chatIds.slice(0, 5).forEach(id => {
         const chat = db.chats[id];
         const firstMsg = chat.messages.find(m => m.role === 'user')?.text || 'Empty';
-        output += `- [${id}] ${firstMsg.substring(0, 40).replace(/\n/g, ' ')}\n`;
+        output += `- [\${id}] \${firstMsg.substring(0, 40).replace(/\\n/g, ' ')}\\n`;
       });
     }
     
@@ -322,7 +339,7 @@ async function handleCLI(request, env, url) {
     db.chats[targetId].messages.push({ id: msgId, role, text, timestamp: Date.now() });
     await saveDB(db);
 
-    return new Response(`Success! Chat ID: \${targetId}\n`, { status: 201, headers: textPlain });
+    return new Response(`Success! Chat ID: \${targetId}\\n`, { status: 201, headers: textPlain });
   }
 
   if (path === '/cli/latest' && request.method === 'GET') {
@@ -359,7 +376,7 @@ async function handleCLI(request, env, url) {
     let output = `=== Chat \${chatId} ===\\n\\n`;
     chat.messages.forEach(msg => {
       const prefix = msg.role === 'user' ? '[PROMPT]' : '[AI RESULT]';
-      output += `\${prefix}:\\n\${msg.text}\\n\\n---\\n\\n\=`;
+      output += `\${prefix}:\\n\${msg.text}\\n\\n---\\n\\n`;
     });
 
     return new Response(output, { headers: textPlain });
