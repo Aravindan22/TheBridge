@@ -4,7 +4,7 @@ const HTML_UI = `<!DOCTYPE html>
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-<meta name="theme-color" content="#0B1120">
+<meta name="theme-color" content="#121212">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -16,17 +16,19 @@ const HTML_UI = `<!DOCTYPE html>
 <link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <style>
+  /* ── Matte Black & White Theme ── */
   :root {
-    --bg-dark: #0B1120; --bg-card: #1E293B; --bg-input: #0F172A;
-    --blue: #2563EB; --blue-light: #3B82F6;
-    --green: #4ADE80; --green-dark: #064E3B;
-    --white: #F8FAFC; --muted: #94A3B8; --danger: #EF4444;
+    --bg-dark: #121212; --bg-card: #1E1E1E; --bg-input: #0A0A0A;
+    --accent: #E0E0E0; --accent-light: #FFFFFF;
+    --bubble-user: #2A2A2A; --bubble-ai-bg: #F5F5F5; --bubble-ai-fg: #111111;
+    --white: #F0F0F0; --muted: #888888; --danger: #C0392B;
+    --border: #2E2E2E;
   }
   * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
   body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--bg-dark); color: var(--white); height: 100dvh; display: flex; flex-direction: column; overflow: hidden; user-select: none; }
 
-  .header { background: var(--bg-card); padding: 15px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #334155; flex-shrink: 0; }
-  .header h1 { font-size: 1.2rem; font-weight: 600; }
+  .header { background: var(--bg-card); padding: 15px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+  .header h1 { font-size: 1.2rem; font-weight: 600; letter-spacing: 0.03em; }
   .icon-btn { background: transparent; border: none; color: var(--white); font-size: 1.5rem; cursor: pointer; padding: 5px; }
   .icon-btn:active { opacity: 0.5; }
 
@@ -34,7 +36,8 @@ const HTML_UI = `<!DOCTYPE html>
   .hidden { display: none !important; }
 
   .list-container { flex: 1; overflow-y: auto; padding: 15px; }
-  .chat-card { background: var(--bg-card); padding: 15px; border-radius: 12px; margin-bottom: 12px; border: 1px solid #334155; cursor: pointer; transition: transform 0.1s; }
+  .chat-card { background: var(--bg-card); padding: 15px; border-radius: 12px; margin-bottom: 12px; border: 1px solid var(--border); cursor: pointer; transition: transform 0.1s, border-color 0.15s; }
+  .chat-card:hover { border-color: #555; }
   .chat-card:active { transform: scale(0.98); }
   .chat-title { font-weight: 600; margin-bottom: 5px; color: var(--white); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .chat-preview { font-size: 0.9rem; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -43,37 +46,37 @@ const HTML_UI = `<!DOCTYPE html>
   .messages { flex: 1; overflow-y: auto; padding: 15px; display: flex; flex-direction: column; gap: 12px; }
   .bubble { max-width: 85%; padding: 12px 15px; border-radius: 18px; position: relative; word-wrap: break-word; font-size: 0.95rem; line-height: 1.4; }
   .bubble-text { white-space: pre-wrap; }
-  .bubble-user { background: var(--blue); color: white; align-self: flex-end; border-bottom-right-radius: 4px; }
-  .bubble-ai { background: var(--green); color: var(--green-dark); align-self: flex-start; border-bottom-left-radius: 4px; font-weight: 500; }
-  .bubble-actions { display: flex; gap: 10px; margin-top: 8px; font-size: 0.8rem; opacity: 0.8; flex-wrap: wrap; }
+  .bubble-user { background: var(--bubble-user); color: var(--white); align-self: flex-end; border-bottom-right-radius: 4px; border: 1px solid #3A3A3A; }
+  .bubble-ai { background: var(--bubble-ai-bg); color: var(--bubble-ai-fg); align-self: flex-start; border-bottom-left-radius: 4px; font-weight: 500; }
+  .bubble-actions { display: flex; gap: 10px; margin-top: 8px; font-size: 0.8rem; opacity: 0.7; flex-wrap: wrap; }
   .bubble-actions span { cursor: pointer; padding: 5px; }
   .bubble-actions span:active { opacity: 0.5; }
 
-  .input-area { background: var(--bg-card); padding: 15px; border-top: 1px solid #334155; flex-shrink: 0; }
+  .input-area { background: var(--bg-card); padding: 15px; border-top: 1px solid var(--border); flex-shrink: 0; }
   .input-row { display: flex; gap: 10px; margin-bottom: 10px; }
-  textarea { flex: 1; background: var(--bg-input); border: 1px solid #334155; color: var(--white); padding: 12px; border-radius: 12px; font-size: 1rem; resize: none; height: 60px; font-family: inherit; }
-  textarea:focus { outline: none; border-color: var(--blue-light); }
-  .btn { padding: 12px 16px; border-radius: 12px; border: none; font-weight: 600; cursor: pointer; font-size: 0.9rem; white-space: nowrap; }
-  .btn-blue { background: var(--blue); color: white; }
-  .btn-green { background: var(--green); color: var(--green-dark); }
+  textarea { flex: 1; background: var(--bg-input); border: 1px solid var(--border); color: var(--white); padding: 12px; border-radius: 12px; font-size: 1rem; resize: none; height: 60px; font-family: inherit; }
+  textarea:focus { outline: none; border-color: #888888; }
+  .btn { padding: 12px 16px; border-radius: 12px; border: none; font-weight: 600; cursor: pointer; font-size: 0.9rem; white-space: nowrap; letter-spacing: 0.02em; }
+  .btn-blue { background: var(--accent); color: #111111; }
+  .btn-green { background: #2A2A2A; color: var(--white); border: 1px solid #444; }
   .btn-danger { background: var(--danger); color: white; }
-  .btn-muted { background: #334155; color: var(--white); }
+  .btn-muted { background: #2A2A2A; color: var(--white); border: 1px solid #3A3A3A; }
   .btn:active { opacity: 0.7; }
 
   .login-screen { flex: 1; display: flex; flex-direction: column; justify-content: center; padding: 20px; }
-  .login-screen input { background: var(--bg-input); border: 1px solid #334155; color: var(--white); padding: 15px; border-radius: 12px; font-size: 1rem; margin-bottom: 15px; }
+  .login-screen input { background: var(--bg-input); border: 1px solid var(--border); color: var(--white); padding: 15px; border-radius: 12px; font-size: 1rem; margin-bottom: 15px; }
 
-  .toast { position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%); background: var(--bg-card); color: var(--white); border: 1px solid var(--green); padding: 10px 20px; border-radius: 20px; opacity: 0; transition: opacity 0.3s; pointer-events: none; font-size: 0.9rem; z-index: 1000;}
+  .toast { position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%); background: var(--bg-card); color: var(--white); border: 1px solid #555; padding: 10px 20px; border-radius: 20px; opacity: 0; transition: opacity 0.3s; pointer-events: none; font-size: 0.9rem; z-index: 1000;}
   .toast.show { opacity: 1; }
 
   .empty-state { text-align: center; color: var(--muted); margin-top: 50px; }
 
-  .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center; padding: 20px; z-index: 2000; }
-  .modal-box { background: var(--bg-card); border: 1px solid #334155; border-radius: 14px; padding: 20px; width: 100%; max-width: 360px; }
+  .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.75); display: flex; align-items: center; justify-content: center; padding: 20px; z-index: 2000; }
+  .modal-box { background: var(--bg-card); border: 1px solid var(--border); border-radius: 14px; padding: 20px; width: 100%; max-width: 360px; }
   .modal-title { font-weight: 600; margin-bottom: 12px; font-size: 1.05rem; }
   .modal-message { color: var(--muted); margin-bottom: 16px; font-size: 0.95rem; line-height: 1.4; }
-  .modal-textarea { width: 100%; background: var(--bg-input); border: 1px solid #334155; color: var(--white); padding: 12px; border-radius: 10px; font-size: 0.95rem; resize: none; height: 100px; font-family: inherit; margin-bottom: 16px; }
-  .modal-textarea:focus { outline: none; border-color: var(--blue-light); }
+  .modal-textarea { width: 100%; background: var(--bg-input); border: 1px solid var(--border); color: var(--white); padding: 12px; border-radius: 10px; font-size: 0.95rem; resize: none; height: 100px; font-family: inherit; margin-bottom: 16px; }
+  .modal-textarea:focus { outline: none; border-color: #888888; }
   .modal-actions { display: flex; gap: 10px; justify-content: flex-end; }
 </style>
 </head>
@@ -81,7 +84,7 @@ const HTML_UI = `<!DOCTYPE html>
 
 <div id="login-view" class="view">
   <div class="login-screen">
-    <h1 style="text-align:center; margin-bottom:30px; color:var(--green);">🔐 Prompt Bridge</h1>
+    <h1 style="text-align:center; margin-bottom:30px; color:var(--white); letter-spacing:0.04em;">🔐 Prompt Bridge</h1>
     <input type="password" id="pwd-input" placeholder="Enter Password" />
     <button class="btn btn-blue" style="width:100%" onclick="login()">Unlock</button>
   </div>
@@ -551,8 +554,8 @@ const MANIFEST = {
   start_url: '/',
   scope: '/',
   display: 'standalone',
-  background_color: '#0B1120',
-  theme_color: '#0B1120',
+  background_color: '#121212',
+  theme_color: '#121212',
   orientation: 'portrait',
   icons: [
     { src: '/icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },

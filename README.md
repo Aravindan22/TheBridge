@@ -9,7 +9,7 @@ Designed for situations where you can't access certain things on one device but 
 ## ✨ Features
 
 - **Chat Threads** — Organize prompts and AI results into threaded conversations
-- **Web UI** — Beautiful dark-themed, mobile-friendly interface (Blue / Green / White)
+- **Web UI** — Matte black & white themed, mobile-friendly interface (Greyscale / Monochrome)
 - **CLI API** — Terminal-friendly endpoints at `/cli` for `curl` workflows
 - **Zero Install** — Works in any browser, no app needed
 - **Password Protected** — Single secret password via environment variable
