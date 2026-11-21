@@ -36,7 +36,7 @@ const HTML_UI = `<!DOCTYPE html>
   .hidden { display: none !important; }
 
   .list-container { flex: 1; overflow-y: auto; padding: 15px; }
-  .chat-card { background: var(--bg-card); padding: 15px; border-radius: 12px; margin-bottom: 12px; border: 1px solid var(--border); cursor: pointer; transition: transform 0.1s, border-color 0.15s; }
+  .chat-card { background: var(--bg-card); padding: 15px; border-radius: 0; margin-bottom: 12px; border: 1px solid var(--border); cursor: pointer; transition: transform 0.1s, border-color 0.15s; }
   .chat-card:hover { border-color: #555; }
   .chat-card:active { transform: scale(0.98); }
   .chat-title { font-weight: 600; margin-bottom: 5px; color: var(--white); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -44,19 +44,19 @@ const HTML_UI = `<!DOCTYPE html>
   .chat-meta { font-size: 0.75rem; color: var(--muted); margin-top: 8px; display: flex; justify-content: space-between; }
 
   .messages { flex: 1; overflow-y: auto; padding: 15px; display: flex; flex-direction: column; gap: 12px; }
-  .bubble { max-width: 85%; padding: 12px 15px; border-radius: 18px; position: relative; word-wrap: break-word; font-size: 0.95rem; line-height: 1.4; }
+  .bubble { max-width: 85%; padding: 12px 15px; border-radius: 0; position: relative; word-wrap: break-word; font-size: 0.95rem; line-height: 1.4; }
   .bubble-text { white-space: pre-wrap; }
-  .bubble-user { background: var(--bubble-user); color: var(--white); align-self: flex-end; border-bottom-right-radius: 4px; border: 1px solid #3A3A3A; }
-  .bubble-ai { background: var(--bubble-ai-bg); color: var(--bubble-ai-fg); align-self: flex-start; border-bottom-left-radius: 4px; font-weight: 500; }
+  .bubble-user { background: var(--bubble-user); color: var(--white); align-self: flex-end; border-bottom-right-radius: 0; border: 1px solid #3A3A3A; }
+  .bubble-ai { background: var(--bubble-ai-bg); color: var(--bubble-ai-fg); align-self: flex-start; border-bottom-left-radius: 0; font-weight: 500; }
   .bubble-actions { display: flex; gap: 10px; margin-top: 8px; font-size: 0.8rem; opacity: 0.7; flex-wrap: wrap; }
   .bubble-actions span { cursor: pointer; padding: 5px; }
   .bubble-actions span:active { opacity: 0.5; }
 
   .input-area { background: var(--bg-card); padding: 15px; border-top: 1px solid var(--border); flex-shrink: 0; }
   .input-row { display: flex; gap: 10px; margin-bottom: 10px; }
-  textarea { flex: 1; background: var(--bg-input); border: 1px solid var(--border); color: var(--white); padding: 12px; border-radius: 12px; font-size: 1rem; resize: none; height: 60px; font-family: inherit; }
+  textarea { flex: 1; background: var(--bg-input); border: 1px solid var(--border); color: var(--white); padding: 12px; border-radius: 0; font-size: 1rem; resize: none; height: 60px; font-family: inherit; }
   textarea:focus { outline: none; border-color: #888888; }
-  .btn { padding: 12px 16px; border-radius: 12px; border: none; font-weight: 600; cursor: pointer; font-size: 0.9rem; white-space: nowrap; letter-spacing: 0.02em; }
+  .btn { padding: 12px 16px; border-radius: 0; border: none; font-weight: 600; cursor: pointer; font-size: 0.9rem; white-space: nowrap; letter-spacing: 0.02em; }
   .btn-blue { background: var(--accent); color: #111111; }
   .btn-green { background: #2A2A2A; color: var(--white); border: 1px solid #444; }
   .btn-danger { background: var(--danger); color: white; }
@@ -64,18 +64,18 @@ const HTML_UI = `<!DOCTYPE html>
   .btn:active { opacity: 0.7; }
 
   .login-screen { flex: 1; display: flex; flex-direction: column; justify-content: center; padding: 20px; }
-  .login-screen input { background: var(--bg-input); border: 1px solid var(--border); color: var(--white); padding: 15px; border-radius: 12px; font-size: 1rem; margin-bottom: 15px; }
+  .login-screen input { background: var(--bg-input); border: 1px solid var(--border); color: var(--white); padding: 15px; border-radius: 0; font-size: 1rem; margin-bottom: 15px; }
 
-  .toast { position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%); background: var(--bg-card); color: var(--white); border: 1px solid #555; padding: 10px 20px; border-radius: 20px; opacity: 0; transition: opacity 0.3s; pointer-events: none; font-size: 0.9rem; z-index: 1000;}
+  .toast { position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%); background: var(--bg-card); color: var(--white); border: 1px solid #555; padding: 10px 20px; border-radius: 0; opacity: 0; transition: opacity 0.3s; pointer-events: none; font-size: 0.9rem; z-index: 1000;}
   .toast.show { opacity: 1; }
 
   .empty-state { text-align: center; color: var(--muted); margin-top: 50px; }
 
   .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.75); display: flex; align-items: center; justify-content: center; padding: 20px; z-index: 2000; }
-  .modal-box { background: var(--bg-card); border: 1px solid var(--border); border-radius: 14px; padding: 20px; width: 100%; max-width: 360px; }
+  .modal-box { background: var(--bg-card); border: 1px solid var(--border); border-radius: 0; padding: 20px; width: 100%; max-width: 360px; }
   .modal-title { font-weight: 600; margin-bottom: 12px; font-size: 1.05rem; }
   .modal-message { color: var(--muted); margin-bottom: 16px; font-size: 0.95rem; line-height: 1.4; }
-  .modal-textarea { width: 100%; background: var(--bg-input); border: 1px solid var(--border); color: var(--white); padding: 12px; border-radius: 10px; font-size: 0.95rem; resize: none; height: 100px; font-family: inherit; margin-bottom: 16px; }
+  .modal-textarea { width: 100%; background: var(--bg-input); border: 1px solid var(--border); color: var(--white); padding: 12px; border-radius: 0; font-size: 0.95rem; resize: none; height: 100px; font-family: inherit; margin-bottom: 16px; }
   .modal-textarea:focus { outline: none; border-color: #888888; }
   .modal-actions { display: flex; gap: 10px; justify-content: flex-end; }
 </style>
