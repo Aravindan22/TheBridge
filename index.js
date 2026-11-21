@@ -667,25 +667,42 @@ const HTML_UI = `<!DOCTYPE html>
       actions.className = 'bubble-actions';
 
       const copyBtn = document.createElement('span');
-      copyBtn.textContent = '📋 Copy';
+      copyBtn.textContent = 'COPY';
       copyBtn.addEventListener('click', function () { copyText(msg.id); });
 
       const shareBtn = document.createElement('span');
-      shareBtn.textContent = '📤 Share';
+      shareBtn.textContent = 'SHARE';
       shareBtn.addEventListener('click', function () { shareText(msg.id); });
 
       const editBtn = document.createElement('span');
-      editBtn.textContent = '✏️ Edit';
+      editBtn.textContent = 'EDIT';
       editBtn.addEventListener('click', function () { openEditModal(msg.id); });
 
       const deleteBtn = document.createElement('span');
-      deleteBtn.textContent = '🗑️ Delete';
+      deleteBtn.textContent = 'DEL';
       deleteBtn.addEventListener('click', function () { deleteMessage(msg.id); });
 
       actions.appendChild(copyBtn);
       actions.appendChild(shareBtn);
       actions.appendChild(editBtn);
       actions.appendChild(deleteBtn);
+
+      // Detect URLs and add [ GO TO ] button for each unique URL found
+      var urlPattern = /https?:\/\/[^\s<>"']+/gi;
+      var urls = msg.text.match(urlPattern);
+      if (urls) {
+        var seen = {};
+        urls.forEach(function (url) {
+          if (seen[url]) return;
+          seen[url] = true;
+          var goBtn = document.createElement('span');
+          goBtn.textContent = '↗ GO TO';
+          goBtn.title = url;
+          goBtn.style.color = 'inherit';
+          goBtn.addEventListener('click', function () { window.open(url, '_blank', 'noopener,noreferrer'); });
+          actions.appendChild(goBtn);
+        });
+      }
       bubble.appendChild(actions);
 
       container.appendChild(bubble);
