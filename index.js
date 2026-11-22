@@ -156,17 +156,18 @@ const HTML_UI = `<!DOCTYPE html>
   }
 
   .chat-preview {
-    font-size: 0.75rem;
-    color: var(--dim);
+    font-size: 0.82rem;
+    color: #d4d4d4;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    line-height: 1.4;
   }
-  .chat-preview::before { content: '» '; color: #3a3a3a; }
+  .chat-preview::before { content: '» '; color: #888888; font-weight: bold; }
 
   .chat-meta {
-    font-size: 0.65rem;
-    color: #3a3a3a;
+    font-size: 0.7rem;
+    color: #888888;
     margin-top: 8px;
     padding-top: 6px;
     border-top: 1px solid var(--border);
@@ -237,7 +238,7 @@ const HTML_UI = `<!DOCTYPE html>
     font-size: 0.68rem;
     letter-spacing: 0.06em;
     text-transform: uppercase;
-    opacity: 0.55;
+    opacity: 0.85;
     flex-wrap: wrap;
     border-top: 1px solid currentColor;
   }
@@ -948,7 +949,7 @@ const HTML_UI = `<!DOCTYPE html>
 
 // --- PWA: service worker script + manifest + icons ---
 const SW_JS = `
-const CACHE_NAME = 'bridge-shell-v3';
+const CACHE_NAME = 'bridge-shell-v4';
 const SHELL_URLS = ['/', '/manifest.json', '/icon-192.png', '/icon-512.png'];
 
 self.addEventListener('install', (e) => {
