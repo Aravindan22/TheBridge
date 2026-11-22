@@ -741,21 +741,28 @@ const HTML_UI = `<!DOCTYPE html>
       actions.appendChild(deleteBtn);
 
       // Detect URLs and add [ GO TO ] button for each unique URL found
-      var urlPattern = /https?:\/\/[^\s<>"']+/gi;
-      var urls = msg.text.match(urlPattern);
-      if (urls) {
-        var seen = {};
-        urls.forEach(function (url) {
-          if (seen[url]) return;
-          seen[url] = true;
-          var goBtn = document.createElement('span');
-          goBtn.textContent = '↗ GO TO';
-          goBtn.title = url;
-          goBtn.style.color = 'inherit';
-          goBtn.addEventListener('click', function () { window.open(url, '_blank', 'noopener,noreferrer'); });
-          actions.appendChild(goBtn);
-        });
+      var rawTokens = msg.text.split(/\\s+/);
+      var urls = [];
+      var stripEnd = [',', ';', ':', '!', '?', ')', ']', '>', '"', String.fromCharCode(39)];
+      for (var u = 0; u < rawTokens.length; u++) {
+        var item = rawTokens[u].trim();
+        if (item.indexOf('http://') === 0 || item.indexOf('https://') === 0) {
+          while (item.length > 0 && stripEnd.indexOf(item.charAt(item.length - 1)) !== -1) {
+            item = item.slice(0, -1);
+          }
+          if (item.length > 8 && urls.indexOf(item) === -1) {
+            urls.push(item);
+          }
+        }
       }
+      urls.forEach(function (url) {
+        var goBtn = document.createElement('span');
+        goBtn.textContent = '↗ GO TO';
+        goBtn.title = url;
+        goBtn.style.color = 'inherit';
+        goBtn.addEventListener('click', function () { window.open(url, '_blank', 'noopener,noreferrer'); });
+        actions.appendChild(goBtn);
+      });
       bubble.appendChild(actions);
 
       container.appendChild(bubble);
@@ -941,7 +948,7 @@ const HTML_UI = `<!DOCTYPE html>
 
 // --- PWA: service worker script + manifest + icons ---
 const SW_JS = `
-const CACHE_NAME = 'bridge-shell-v2';
+const CACHE_NAME = 'bridge-shell-v3';
 const SHELL_URLS = ['/', '/manifest.json', '/icon-192.png', '/icon-512.png'];
 
 self.addEventListener('install', (e) => {
