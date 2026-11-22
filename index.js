@@ -175,6 +175,10 @@ const HTML_UI = `<!DOCTYPE html>
     justify-content: space-between;
     letter-spacing: 0.04em;
   }
+  .msg-count-num {
+    color: #fb923c;
+    font-weight: 700;
+  }
 
   /* ── Messages ── */
   .messages {
@@ -680,7 +684,11 @@ const HTML_UI = `<!DOCTYPE html>
       const metaEl = document.createElement('div');
       metaEl.className = 'chat-meta';
       const countSpan = document.createElement('span');
-      countSpan.textContent = msgs.length + ' messages';
+      const numSpan = document.createElement('span');
+      numSpan.className = 'msg-count-num';
+      numSpan.textContent = msgs.length;
+      countSpan.appendChild(numSpan);
+      countSpan.appendChild(document.createTextNode(msgs.length === 1 ? ' message' : ' messages'));
       const dateSpan = document.createElement('span');
       dateSpan.textContent = date;
       metaEl.appendChild(countSpan);
@@ -949,7 +957,7 @@ const HTML_UI = `<!DOCTYPE html>
 
 // --- PWA: service worker script + manifest + icons ---
 const SW_JS = `
-const CACHE_NAME = 'bridge-shell-v4';
+const CACHE_NAME = 'bridge-shell-v5';
 const SHELL_URLS = ['/', '/manifest.json', '/icon-192.png', '/icon-512.png'];
 
 self.addEventListener('install', (e) => {
