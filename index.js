@@ -353,14 +353,13 @@ const HTML_UI = `<!DOCTYPE html>
     animation: blink 1.1s step-end infinite;
   }
 
-  /* Inject a subtle label above input */
-  .login-screen::before {
-    content: '// ENTER_ACCESS_KEY';
-    display: block;
+  /* Label above input */
+  .login-label {
     font-size: 0.65rem;
     letter-spacing: 0.14em;
     color: var(--dim);
     margin: 20px 0 8px;
+    display: block;
   }
 
   .login-screen input {
@@ -475,8 +474,12 @@ const HTML_UI = `<!DOCTYPE html>
 <div id="login-view" class="view">
   <div class="login-screen">
     <h1 style="margin-bottom:0;">PROMPT_BRIDGE</h1>
-    <input type="password" id="pwd-input" placeholder="••••••••••••" />
-    <button class="btn btn-blue" style="width:100%; padding:14px;" onclick="login()">[ UNLOCK ]</button>
+    <div class="login-label">// ENTER_ACCESS_KEY</div>
+    <form id="login-form" onsubmit="event.preventDefault(); login();" style="display:flex; flex-direction:column; width:100%;">
+      <input type="password" id="pwd-input" placeholder="••••••••••••" autocomplete="current-password" autofocus />
+      <button type="submit" id="unlock-btn" class="btn btn-blue" style="width:100%; padding:14px;">[ UNLOCK ]</button>
+    </form>
+    <div id="login-error" style="color:var(--danger); font-size:0.75rem; margin-top:12px; letter-spacing:0.08em; text-align:center; min-height:1.2em;"></div>
   </div>
 </div>
 
@@ -539,26 +542,75 @@ const HTML_UI = `<!DOCTYPE html>
   let state = { chats: {}, currentChatId: null };
   let modalConfirmCallback = null;
 
-  if (TOKEN) checkAuth();
+  if (TOKEN) checkAuth(false);
 
-  async function checkAuth() {
-    const res = await fetch('/api/chats', { headers: { 'X-Auth': TOKEN } });
-    if (res.ok) {
-      state.chats = await res.json();
-      showListView();
-    } else {
+  async function checkAuth(isManual) {
+    const input = document.getElementById('pwd-input');
+    const btn = document.getElementById('unlock-btn');
+    const errEl = document.getElementById('login-error');
+    if (errEl) errEl.textContent = '';
+
+    if (btn && isManual) {
+      btn.disabled = true;
+      btn.textContent = '[ UNLOCKING... ]';
+    }
+
+    try {
+      const res = await fetch('/api/chats', { headers: { 'X-Auth': TOKEN } });
+      if (res.ok) {
+        state.chats = (await res.json()) || {};
+        showListView();
+        if (input) input.value = '';
+      } else {
+        const errorText = await res.text();
+        TOKEN = null;
+        localStorage.removeItem('bridge_token');
+        document.getElementById('login-view').classList.remove('hidden');
+        if (isManual) {
+          const msg = res.status === 401 ? 'ACCESS DENIED: INVALID KEY' : ('ERROR ' + res.status + ': ' + (errorText || 'Server Error'));
+          if (errEl) errEl.textContent = '// ' + msg;
+          showToast(msg);
+          if (input) {
+            input.focus();
+            input.select();
+          }
+        }
+      }
+    } catch (err) {
       TOKEN = null;
       localStorage.removeItem('bridge_token');
       document.getElementById('login-view').classList.remove('hidden');
+      if (isManual) {
+        const msg = 'NETWORK ERROR: ' + (err.message || 'Failed to connect');
+        if (errEl) errEl.textContent = '// ' + msg;
+        showToast(msg);
+      }
+    } finally {
+      if (btn) {
+        btn.disabled = false;
+        btn.textContent = '[ UNLOCK ]';
+      }
     }
   }
 
   async function login() {
-    TOKEN = document.getElementById('pwd-input').value;
-    if (!TOKEN) return;
+    const input = document.getElementById('pwd-input');
+    const errEl = document.getElementById('login-error');
+    if (errEl) errEl.textContent = '';
+    const val = input ? input.value : '';
+    if (!val || !val.trim()) {
+      const msg = 'PLEASE ENTER ACCESS KEY';
+      if (errEl) errEl.textContent = '// ' + msg;
+      showToast(msg);
+      if (input) input.focus();
+      return;
+    }
+    TOKEN = val.trim();
     localStorage.setItem('bridge_token', TOKEN);
-    await checkAuth();
+    await checkAuth(true);
   }
+
+  window.login = login;
 
   function logout() {
     TOKEN = null;
@@ -583,7 +635,7 @@ const HTML_UI = `<!DOCTYPE html>
   async function refreshData() {
     const res = await fetch('/api/chats', { headers: { 'X-Auth': TOKEN } });
     if (res.ok) {
-      state.chats = await res.json();
+      state.chats = (await res.json()) || {};
       if (state.currentChatId) renderChat();
       else renderList();
       showToast('Refreshed!');
@@ -593,6 +645,7 @@ const HTML_UI = `<!DOCTYPE html>
   function renderList() {
     const container = document.getElementById('chat-list');
     container.innerHTML = '';
+    state.chats = state.chats || {};
     const chatIds = Object.keys(state.chats).sort(function (a, b) { return b - a; });
 
     if (chatIds.length === 0) {
@@ -604,12 +657,12 @@ const HTML_UI = `<!DOCTYPE html>
     }
 
     chatIds.forEach(function (id) {
-      const chat = state.chats[id];
-      const msgs = chat.messages;
-      const userMsg = msgs.find(function (m) { return m.role === 'user'; });
-      const title = userMsg ? userMsg.text : 'New Chat';
-      const preview = msgs.length ? msgs[msgs.length - 1].text : '';
-      const date = new Date(parseInt(id, 10)).toLocaleString();
+      const chat = state.chats[id] || {};
+      const msgs = chat.messages || [];
+      const userMsg = msgs.find(function (m) { return m && m.role === 'user'; });
+      const title = userMsg && userMsg.text ? userMsg.text : 'New Chat';
+      const preview = (msgs.length && msgs[msgs.length - 1] && msgs[msgs.length - 1].text) ? msgs[msgs.length - 1].text : '';
+      const date = isNaN(parseInt(id, 10)) ? '' : new Date(parseInt(id, 10)).toLocaleString();
 
       const card = document.createElement('div');
       card.className = 'chat-card';
@@ -888,7 +941,7 @@ const HTML_UI = `<!DOCTYPE html>
 
 // --- PWA: service worker script + manifest + icons ---
 const SW_JS = `
-const CACHE_NAME = 'bridge-shell-v1';
+const CACHE_NAME = 'bridge-shell-v2';
 const SHELL_URLS = ['/', '/manifest.json', '/icon-192.png', '/icon-512.png'];
 
 self.addEventListener('install', (e) => {
@@ -1104,7 +1157,12 @@ export default {
     }
 
     const token = request.headers.get('X-Auth');
-    if (token !== env.ADMIN_PASSWORD) {
+    const adminPass = env.ADMIN_PASSWORD ? String(env.ADMIN_PASSWORD) : '';
+    if (!adminPass) {
+      return new Response('Server configuration error: ADMIN_PASSWORD secret is not set in Cloudflare Worker settings.', { status: 500, headers: { 'Content-Type': 'text/plain' } });
+    }
+    const isAuthed = token && (token === adminPass || token.trim() === adminPass.trim());
+    if (!isAuthed) {
       return new Response('Unauthorized. Use -H "X-Auth: YOUR_PASSWORD"', { status: 401, headers: { 'Content-Type': 'text/plain' } });
     }
 
@@ -1112,8 +1170,14 @@ export default {
       return handleCLI(request, env, url);
     }
 
-    const getDB = async () => (await env.CLIP_KV.get('database', 'json')) || { chats: {} };
-    const saveDB = async (data) => await env.CLIP_KV.put('database', JSON.stringify(data));
+    const getDB = async () => {
+      if (!env.CLIP_KV) throw new Error('CLIP_KV namespace is not bound in Cloudflare settings');
+      return (await env.CLIP_KV.get('database', 'json')) || { chats: {} };
+    };
+    const saveDB = async (data) => {
+      if (!env.CLIP_KV) throw new Error('CLIP_KV namespace is not bound in Cloudflare settings');
+      return await env.CLIP_KV.put('database', JSON.stringify(data));
+    };
 
     if (path === '/api/chats' && request.method === 'GET') {
       const db = await getDB(); return Response.json(db.chats);
