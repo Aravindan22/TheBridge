@@ -91,51 +91,246 @@ Open your Worker URL (e.g., `https://ai-prompt-bridge.your-subdomain.workers.dev
 
 ---
 
-## 💻 CLI Usage
+## 💻 CLI & REST API Reference
 
-All CLI endpoints return **plain text**, making them perfect for terminal piping.
+Prompt Bridge offers two complementary interfaces for terminal users, automation scripts, and command-line workflows:
+- **CLI Endpoints (`/cli*`)**: Return lightweight **plain text** (`text/plain; charset=utf-8`), engineered for seamless terminal piping (`curl`, `cat`, `pbcopy`, `xargs`) without requiring JSON parsing tools like `jq`.
+- **REST API Endpoints (`/api*`)**: Accept and return structured **JSON** (`application/json`), providing full programmatic CRUD capabilities over chats and individual messages.
 
-Set your variables for convenience:
+---
+
+### 1. Overview & Authentication
+
+All API and CLI requests require authentication via the `X-Auth` header matching your configured `ADMIN_PASSWORD`.
+
+Set these environment variables in your terminal session for convenience:
+
 ```bash
 URL="https://ai-prompt-bridge.your-subdomain.workers.dev"
 AUTH="X-Auth: YOUR_PASSWORD"
 ```
 
-### List recent chats & see help
+| Interface | Path Prefix | Content-Type | Use Case |
+|---|---|---|---|
+| **CLI Endpoints** | `/cli`, `/cli/latest`, `/cli/chat/:id` | `text/plain` | Direct terminal viewing, piping to clipboard, shell scripts |
+| **REST API** | `/api/chats`, `/api/chats/:id/messages` | `application/json` | Programmatic automation, webhooks, fine-grained CRUD control |
+
+> **Authentication Failure:** If `X-Auth` is omitted or incorrect, endpoints return HTTP `401 Unauthorized` (`Unauthorized. Use -H "X-Auth: YOUR_PASSWORD"`).
+
+---
+
+### 2. CREATE (C)
+
+#### A. Create a New Chat Thread with an Initial Prompt
+
+- **CLI (`POST /cli`)** — Submit prompt text directly in the request body. A new chat thread ID (Unix timestamp in milliseconds) is created automatically:
+  ```bash
+  curl -s -X POST -H "$AUTH" \
+    -d "Explain quantum computing in simple terms" \
+    "$URL/cli"
+  ```
+  *Response (Plain Text, HTTP 201):*
+  ```text
+  Success! Chat ID: 1726234567890
+  ```
+
+- **REST API (`POST /api/chats`)** — Create an empty chat thread with a specific numeric ID:
+  ```bash
+  CHAT_ID=$(date +%s%3N)
+  curl -s -X POST -H "$AUTH" \
+    -H "Content-Type: application/json" \
+    -d "{\"id\": \"$CHAT_ID\"}" \
+    "$URL/api/chats"
+  ```
+  *Response (JSON, HTTP 200):*
+  ```json
+  {"success": true}
+  ```
+
+#### B. Append a Prompt or AI Result to an Existing Chat
+
+- **CLI (`POST /cli?chat=<id>&role=<user|ai>`)** — Append a follow-up user prompt or AI response to an existing thread. Parameter `role` defaults to `user` if omitted:
+  ```bash
+  # Append user follow-up prompt:
+  curl -s -X POST -H "$AUTH" \
+    -d "Can you provide a simple analogy?" \
+    "$URL/cli?chat=1726234567890&role=user"
+
+  # Append AI result:
+  curl -s -X POST -H "$AUTH" \
+    -d "Think of qubits as spinning coins showing heads and tails simultaneously." \
+    "$URL/cli?chat=1726234567890&role=ai"
+  ```
+  *Response (Plain Text, HTTP 201):*
+  ```text
+  Success! Chat ID: 1726234567890
+  ```
+
+- **REST API (`POST /api/chats/<id>/messages`)** — Append a message object with custom message `id`, `role`, and `text`:
+  ```bash
+  MSG_ID="msg_$(date +%s%3N)_$(head /dev/urandom | tr -dc a-z0-9 | head -c 9)"
+  curl -s -X POST -H "$AUTH" \
+    -H "Content-Type: application/json" \
+    -d "{\"id\": \"$MSG_ID\", \"role\": \"ai\", \"text\": \"Qubits enable exponential computational parallelism.\"}" \
+    "$URL/api/chats/1726234567890/messages"
+  ```
+  *Response (JSON, HTTP 200):*
+  ```json
+  {"success": true}
+  ```
+
+#### C. Piping Files or Standard Input (stdin)
+
+Pipe files, git diffs, or clipboard contents directly into Prompt Bridge using `--data-binary @-`:
+
 ```bash
-curl -H "$AUTH" $URL/cli
+# Pipe AI response file to an existing chat:
+cat ai-response.txt | curl -s -X POST -H "$AUTH" --data-binary @- "$URL/cli?chat=1726234567890&role=ai"
+
+# Pipe git diff as a new prompt:
+git diff HEAD~1 | curl -s -X POST -H "$AUTH" --data-binary @- "$URL/cli"
+
+# Pipe clipboard content directly (macOS pbpaste):
+pbpaste | curl -s -X POST -H "$AUTH" --data-binary @- "$URL/cli?role=ai"
 ```
 
-### Get the latest prompt (typed on your phone)
-```bash
-curl -H "$AUTH" "$URL/cli/latest?role=user"
-```
+---
 
-### Get the latest AI result
-```bash
-curl -H "$AUTH" "$URL/cli/latest?role=ai"
-```
+### 3. READ (R)
 
-### Create a new chat with a prompt
-```bash
-curl -X POST -H "$AUTH" -d "Explain quantum computing" "$URL/cli"
-```
-*Returns: `Success! Chat ID: 1726234567890`*
+#### A. List Recent Chats or All Chats
 
-### Append an AI result to a specific chat
-```bash
-curl -X POST -H "$AUTH" -d "Quantum computing is..." "$URL/cli?chat=1726234567890&role=ai"
-```
+- **CLI (`GET /cli`)** — Displays the 5 most recent chat threads and their initial prompt preview, followed by a quick command reference:
+  ```bash
+  curl -s -H "$AUTH" "$URL/cli"
+  ```
+  *Sample Response (Plain Text):*
+  ```text
+  === Prompt Bridge CLI ===
 
-### View full chat thread
-```bash
-curl -H "$AUTH" "$URL/cli/chat/1726234567890"
-```
+  Recent Chats:
+  - [1726234567890] Explain quantum computing in simple term
+  - [1726234400123] Review this rust code for memory safet
 
-### Pipe a file directly to your phone
-```bash
-cat ai-response.txt | curl -X POST -H "$AUTH" --data-binary @- "$URL/cli?role=ai"
-```
+  --- Commands ---
+  POST /cli             : Create new chat (Body = prompt text)
+  POST /cli?chat=ID     : Append to chat (Body = text)
+  GET  /cli/latest      : Get latest message text
+  GET  /cli/latest?role=user|ai : Filter by role
+  GET  /cli/chat/ID     : Get full chat text
+  ```
+
+- **REST API (`GET /api/chats`)** — Returns the full database of all chat threads, timestamps, and messages:
+  ```bash
+  curl -s -H "$AUTH" "$URL/api/chats"
+  ```
+  *Sample Response (JSON):*
+  ```json
+  {
+    "1726234567890": {
+      "messages": [
+        {
+          "id": "msg_1726234567890_abc123456",
+          "role": "user",
+          "text": "Explain quantum computing in simple terms",
+          "timestamp": 1726234567890
+        },
+        {
+          "id": "msg_1726234578123_xyz987654",
+          "role": "ai",
+          "text": "Think of qubits as spinning coins showing heads and tails simultaneously.",
+          "timestamp": 1726234578123
+        }
+      ]
+    }
+  }
+  ```
+
+#### B. Read Full Chat Conversation History
+
+- **CLI (`GET /cli/chat/<id>`)** — Returns a formatted, plain text transcript of the entire thread with labeled prompt and AI response blocks:
+  ```bash
+  curl -s -H "$AUTH" "$URL/cli/chat/1726234567890"
+  ```
+  *Sample Response (Plain Text):*
+  ```text
+  === Chat 1726234567890 ===
+
+  [PROMPT]:
+  Explain quantum computing in simple terms
+
+  ---
+
+  [AI RESULT]:
+  Think of qubits as spinning coins showing heads and tails simultaneously.
+
+  ---
+  ```
+
+#### C. Fetch Latest Prompt or AI Result
+
+- **CLI (`GET /cli/latest`)** — Retrieves the raw text of the most recent message across all threads. Use the `role` query parameter to filter by author:
+  ```bash
+  # Get latest message (user prompt or AI result):
+  curl -s -H "$AUTH" "$URL/cli/latest"
+
+  # Get latest prompt created on mobile to paste into your local terminal/AI tool:
+  curl -s -H "$AUTH" "$URL/cli/latest?role=user"
+
+  # Get latest AI result to review:
+  curl -s -H "$AUTH" "$URL/cli/latest?role=ai"
+
+  # Copy latest prompt directly to macOS clipboard:
+  curl -s -H "$AUTH" "$URL/cli/latest?role=user" | pbcopy
+  ```
+
+---
+
+### 4. UPDATE (U)
+
+#### Update / Edit Existing Message Text
+
+- **REST API (`PUT /api/chats/<chatId>/messages/<msgId>`)** — Edit the text of an existing message in a chat thread without changing its role or timestamp:
+  ```bash
+  curl -s -X PUT -H "$AUTH" \
+    -H "Content-Type: application/json" \
+    -d '{"text": "Quantum computers leverage superposition, entanglement, and interference to solve specific problems exponentially faster."}' \
+    "$URL/api/chats/1726234567890/messages/msg_1726234578123_xyz987654"
+  ```
+  *Response (JSON, HTTP 200):*
+  ```json
+  {"success": true}
+  ```
+  *(Returns HTTP `404 Chat not found` or `404 Message not found` if target identifiers do not exist)*
+
+---
+
+### 5. DELETE (D)
+
+#### A. Delete a Specific Message
+
+- **REST API (`DELETE /api/chats/<chatId>/messages/<msgId>`)** — Remove an individual message from a conversation thread:
+  ```bash
+  curl -s -X DELETE -H "$AUTH" \
+    "$URL/api/chats/1726234567890/messages/msg_1726234578123_xyz987654"
+  ```
+  *Response (JSON, HTTP 200):*
+  ```json
+  {"success": true}
+  ```
+  *(Returns HTTP `404 Chat not found` if the chat ID is not found)*
+
+#### B. Delete an Entire Chat Thread
+
+- **REST API (`DELETE /api/chats/<chatId>`)** — Permanently remove a chat thread and all associated messages from the database:
+  ```bash
+  curl -s -X DELETE -H "$AUTH" \
+    "$URL/api/chats/1726234567890"
+  ```
+  *Response (JSON, HTTP 200):*
+  ```json
+  {"success": true}
+  ```
 
 ---
 
